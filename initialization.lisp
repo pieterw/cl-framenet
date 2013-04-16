@@ -1,0 +1,32 @@
+(in-package :cl-framenet)
+
+(export '(init-fn-data))
+
+(defun create-indexes (&key (lu-path (framenet-file "luIndex.xml"))
+                        (frame-path (framenet-file "frameIndex.xml"))
+                        (text-path (framenet-file "fulltextIndex.xml")))
+  (format t "~%Loading framenet index files...")
+  (let ((fn-indexes (make-instance 'fn-indexes)))
+    (if (probe-file lu-path)
+        (with-open-file (lu-file lu-path :direction :input)
+          (setf (lu-index fn-indexes) (xmls:parse lu-file)))
+        (warn "Could not find lexical unit index at ~a" lu-path))
+    (if (probe-file frame-path)
+        (with-open-file (frame-file frame-path :direction :input)
+          (setf (frame-index fn-indexes) (xmls:parse frame-file)))
+        (warn "Could not find frame index at ~a" frame-path))
+    (if (probe-file text-path)
+        (with-open-file (text-file text-path :direction :input)
+          (setf (full-text-index fn-indexes) (xmls:parse text-file)))
+        (warn "Could not find full text index at ~a" text-path))
+    (format t ": Done!")
+    fn-indexes))
+
+(defun init-fn-data (&key (load-frame-network t)
+                       (load-lexical-units nil))
+  (setf *fn-indexes* (create-indexes))
+  (setf *sem-type-tree* (init-sem-types))
+  (when load-frame-network
+    (setf *frame-network* (init-frames)))
+  (when load-lexical-units
+    (setf *lexical-units* (load-all-lexical-units :max-nr load-lexical-units))))
